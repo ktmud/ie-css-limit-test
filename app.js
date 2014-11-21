@@ -35,7 +35,7 @@ app.use(function *(next) {
 		'  <form action="">',
 		'  <p>I want <input type="text" size="1" name="file" value="' + fileNum + '"> css files,' +
 				'with file size no large than <input size="6" type="text" name="size" value="' +
-				fileSize + '"> bytes (' + Math.round(fileSize/1024).toFixed(2) + 'kb), and at most ' +
+				fileSize + '"> bytes (' + (fileSize/1024).toFixed(2) + 'kb), and at most ' +
 				'<input size="6" type="text" name="rule" value="' + ruleNum + '"> rules.',
 		'  <p><button type="submit">Submit</button>',
 		'  <p>The background will be <strong>RED</strong> if limit exceeded.',
@@ -49,23 +49,35 @@ app.use(function *(next) {
 
 function *css(next) {
 	var query = this.query
-	var ret = [], ruleNum = query.rule, fileSize = query.size
+	var content = [], ruleNum = query.rule, fileSize = query.size
 	var rule1 = 'body { background: red; margin: 0; margin: 20px; margin: 0; margin: 30px; font-size: 24px; }'
+	var finalRule = 'body { background: #E2EDF9; }'
+	var bullshit = '/* this is bullshit */'
 	var byteLen1 = Buffer.byteLength(rule1 + '\n', 'utf8')
+	var byteLen2 = Buffer.byteLength(bullshit + '\n', 'utf8')
+
+	if (query.final) {
+		fileSize -= Buffer.byteLength(finalRule, 'utf8')
+	}
 
 	while (ruleNum > 0 && fileSize > 0) {
-		ret.push(rule1)
+		content.push(rule1)
 		ruleNum -= 1
 		fileSize -= byteLen1
+	}
+	// file size limit not reached, let's add some bullshit
+	while (fileSize > 0) {
+		content.push(bullshit)
+		fileSize -= byteLen2
 	}
 
 	if (query.final) {
 		// the final should work
-		ret.push('body { background: #E2EDF9; }')
+		content.push(finalRule)
 	}
 
 	this.type = 'text/css'
-	this.body = ret.join('\n')
+	this.body = content.join('\n')
 }
 
 if (!module.parent) {
